@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple FPS Game</title>
+    <style>
+        body { 
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+        }
+        #game {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        .wall {
+            position: absolute;
+            background: #444;
+            border: 1px solid #666;
+        }
+        #player {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: #f00;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+        }
+        #crosshair {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            pointer-events: none;
+            user-select: none;
+        }
+        #instructions {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            color: white;
+            font-family: Arial, sans-serif;
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="player"></div>
+        <div id="crosshair">+</div>
+        <div id="instructions">
+            Click to start<br>
+            WASD to move<br>
+            Mouse to look around<br>
+            ESC to exit
+        </div>
+    </div>
+    <script>
+        const game = document.getElementById('game');
+        const player = document.getElementById('player');
+        let playerX = window.innerWidth / 2;
+        let playerY = window.innerHeight / 2;
+        let playerAngle = 0;
+        let moveForward = false;
+        let moveBackward = false;
+        let moveLeft = false;
+        let moveRight = false;
+        let isLocked = false;
+
+        // Create walls
+        const walls = [
+            { x: 100, y: 100, width: 200, height: 20 },
+            { x: 100, y: 100, width: 20, height: 200 },
+            { x: 300, y: 100, width: 20, height: 200 },
+            { x: 500, y: 300, width: 200, height: 20 },
+            { x: 700, y: 100, width: 20, height: 400 }
+        ];
+
+        walls.forEach(wall => {
+            const wallElement = document.createElement('div');
+            wallElement.className = 'wall';
+            wallElement.style.left = wall.x + 'px';
+            wallElement.style.top = wall.y + 'px';
+            wallElement.style.width = wall.width + 'px';
+            wallElement.style.height = wall.height + 'px';
+            game.appendChild(wallElement);
+        });
+
+        // Mouse look
+        game.addEventListener('click', () => {
+            if (!isLocked) {
+                game.requestPointerLock();
+            }
+        });
+
+        document.addEventListener('pointerlockchange', () => {
+            isLocked = document.pointerLockElement === game;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isLocked) {
+                playerAngle += e.movementX * 0.002;
+            }
+        });
+
+        // Movement
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'KeyW': moveForward = true; break;
+                case 'KeyS': moveBackward = true; break;
+                case 'KeyA': moveLeft = true; break;
+                case 'KeyD': moveRight = true; break;
+                case 'Escape': 
+                    if (document.pointerLockElement) {
+                        document.exitPointerLock();
+                    }
+                    break;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'KeyW': moveForward = false; break;
+                case 'KeyS': moveBackward = false; break;
+                case 'KeyA': moveLeft = false; break;
+                case 'KeyD': moveRight = false; break;
+            }
+        });
+
+        function checkCollision(x, y) {
+            const playerRadius = 10;
+            for (const wall of walls) {
+                if (x + playerRadius > wall.x && 
+                    x - playerRadius < wall.x + wall.width &&
+                    y + playerRadius > wall.y && 
+                    y - playerRadius < wall.y + wall.height) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function gameLoop() {
+            if (isLocked) {
+                const speed = 5;
+                let dx = 0;
+                let dy = 0;
+
+                if (moveForward) {
+                    dx += Math.cos(playerAngle) * speed;
+                    dy += Math.sin(playerAngle) * speed;
+                }
+                if (moveBackward) {
+                    dx -= Math.cos(playerAngle) * speed;
+                    dy -= Math.sin(playerAngle) * speed;
+                }
+                if (moveLeft) {
+                    dx += Math.cos(playerAngle - Math.PI/2) * speed;
+                    dy += Math.sin(playerAngle - Math.PI/2) * speed;
+                }
+                if (moveRight) {
+                    dx += Math.cos(playerAngle + Math.PI/2) * speed;
+                    dy += Math.sin(playerAngle + Math.PI/2) * speed;
+                }
+
+                // Check collision before applying movement
+                if (!checkCollision(playerX + dx, playerY + dy)) {
+                    playerX += dx;
+                    playerY += dy;
+                }
+
+                player.style.left = playerX + 'px';
+                player.style.top = playerY + 'px';
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
